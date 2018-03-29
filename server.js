@@ -38,26 +38,27 @@ function charge(req, res) {
                 console.log("Error invoicing customer: ", err);
                 res.writeHead(400);
                 res.end("Error invoicing customer");
-                return;
-              }
-              console.log("Invoiced " + customer.email + " " + donationAmount);
-              subscribeCustomer(
-                customer,
-                subscriptionPlan,
-                30,
-                (err, subscription) => {
-                  if (err) {
-                    console.log("Error subscribing " + customer.email, err);
-                    res.writeHead(400);
-                    res.end("Error subscribing");
-                    return;
+              } else {
+                console.log(`Invoiced ${customer.email} ${donationAmount}`);
+                subscribeCustomer(
+                  customer,
+                  subscriptionPlan,
+                  30,
+                  (err, subscription) => {
+                    if (err) {
+                      console.log(
+                        `Error subscribing ${customer.email} to ${plan}`
+                      );
+                      res.writeHead(400);
+                      res.end("Error subscribing");
+                    } else {
+                      console.log(`Subscribed ${customer.email} to ${plan}`);
+                      res.writeHead(200);
+                      res.end();
+                    }
                   }
-
-                  console.log("Subscribed " + customer.email + " to " + plan);
-                  res.writeHead(200);
-                  res.end();
-                }
-              );
+                );
+              }
             }
           );
         }
@@ -109,21 +110,19 @@ function createSubscription(stripeToken, subscriptionPlan, cb) {
 }
 
 function subscribeCustomer(customer, plan, trialDays, cb) {
-  const trial_end = parseInt(
-    new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).getTime() / 1000
-  );
-  stripe.subscriptions.create(
-    {
-      customer: customer.id,
-      items: [
-        {
-          plan
-        }
-      ],
-      trial_end
-    },
-    cb
-  );
+  const daysMiliseconds = trialDays * 24 * 60 * 60 * 1000;
+  const endDate = new Date(Date.now() + daysMiliseconds).getTime();
+  const trial_end = parseInt(endDate / 1000);
+  const subscription = {
+    customer: customer.id,
+    items: [
+      {
+        plan
+      }
+    ],
+    trial_end
+  };
+  stripe.subscriptions.create(subscription, cb);
 }
 
 // Legacy donate page
