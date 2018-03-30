@@ -40,24 +40,7 @@ function charge(req, res) {
                 res.end("Error invoicing customer");
               } else {
                 console.log(`Invoiced ${customer.email} ${donationAmount}`);
-                subscribeCustomer(
-                  customer,
-                  subscriptionPlan,
-                  30,
-                  (err, subscription) => {
-                    if (err) {
-                      console.log(
-                        `Error subscribing ${customer.email} to ${plan}`
-                      );
-                      res.writeHead(400);
-                      res.end("Error subscribing");
-                    } else {
-                      console.log(`Subscribed ${customer.email} to ${plan}`);
-                      res.writeHead(200);
-                      res.end();
-                    }
-                  }
-                );
+                subscribeCustomer(customer, subscriptionPlan, 30, res);
               }
             }
           );
@@ -109,7 +92,7 @@ function createSubscription(stripeToken, subscriptionPlan, cb) {
   stripe.customers.create(customer, cb);
 }
 
-function subscribeCustomer(customer, plan, trialDays, cb) {
+function subscribeCustomer(customer, plan, trialDays, res) {
   const daysMiliseconds = trialDays * 24 * 60 * 60 * 1000;
   const endDate = new Date(Date.now() + daysMiliseconds).getTime();
   const trial_end = parseInt(endDate / 1000);
@@ -122,7 +105,17 @@ function subscribeCustomer(customer, plan, trialDays, cb) {
     ],
     trial_end
   };
-  stripe.subscriptions.create(subscription, cb);
+  stripe.subscriptions.create(subscription, (err, subscription) => {
+    if (err) {
+      console.log(`Error subscribing ${customer.email} to ${plan}`, err);
+      res.writeHead(400);
+      res.end("Error subscribing");
+    } else {
+      console.log(`Subscribed ${customer.email} to ${plan}`);
+      res.writeHead(200);
+      res.end();
+    }
+  });
 }
 
 // Legacy donate page
