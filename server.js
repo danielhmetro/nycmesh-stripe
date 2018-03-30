@@ -190,6 +190,10 @@ function donate(req, res, next) {
 var server = restify.createServer();
 
 server.use(restify.bodyParser());
+server.use(function crossOrigin(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "https://nycmesh.net");
+  return next();
+});
 
 server.post("/charge", charge);
 server.post("/donate", donate);
