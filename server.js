@@ -42,27 +42,25 @@ function charge(req, res, next) {
                 next();
               } else {
                 console.log(`Invoiced ${customer.email} ${donationAmount}`);
-                subscribeCustomer(
-                  customer,
-                  subscriptionPlan,
-                  30,
-                  (err, subscription) => {
-                    if (err) {
-                      console.log(
-                        `Error subscribing ${customer.email} to ${plan}`,
-                        err
-                      );
-                      res.writeHead(400);
-                      res.end("Error subscribing");
-                      next();
-                    } else {
-                      console.log(`Subscribed ${customer.email} to ${plan}`);
-                      res.writeHead(200);
-                      res.end();
-                      next();
-                    }
+                subscribeCustomer(customer, subscriptionPlan, 30, function(
+                  err,
+                  subscription
+                ) {
+                  if (err) {
+                    console.log(
+                      `Error subscribing ${customer.email} to ${plan}`,
+                      err
+                    );
+                    res.writeHead(400);
+                    res.end("Error subscribing");
+                    next();
+                  } else {
+                    console.log(`Subscribed ${customer.email} to ${plan}`);
+                    res.writeHead(200);
+                    res.end();
+                    next();
                   }
-                );
+                });
               }
             }
           );
