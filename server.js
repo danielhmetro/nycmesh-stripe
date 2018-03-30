@@ -2,7 +2,7 @@ var key = require("./key");
 var stripe = require("stripe")(key);
 var restify = require("restify");
 
-function charge(req, res) {
+function charge(req, res, next) {
   if (!req.params || !req.params.stripeToken) return;
 
   // should really sanitize input
@@ -24,6 +24,7 @@ function charge(req, res) {
           console.log("Error creating customer: ", err);
           res.writeHead(400);
           res.end("Error creating customer");
+          next();
         } else {
           console.log("Created customer: " + customer.email);
           stripe.invoiceItems.create(
@@ -38,9 +39,30 @@ function charge(req, res) {
                 console.log("Error invoicing customer: ", err);
                 res.writeHead(400);
                 res.end("Error invoicing customer");
+                next();
               } else {
                 console.log(`Invoiced ${customer.email} ${donationAmount}`);
-                subscribeCustomer(customer, subscriptionPlan, 30, res);
+                subscribeCustomer(
+                  customer,
+                  subscriptionPlan,
+                  30,
+                  (err, subscription) => {
+                    if (err) {
+                      console.log(
+                        `Error subscribing ${customer.email} to ${plan}`,
+                        err
+                      );
+                      res.writeHead(400);
+                      res.end("Error subscribing");
+                      next();
+                    } else {
+                      console.log(`Subscribed ${customer.email} to ${plan}`);
+                      res.writeHead(200);
+                      res.end();
+                      next();
+                    }
+                  }
+                );
               }
             }
           );
@@ -62,10 +84,12 @@ function charge(req, res) {
           console.log("Error charging card: ", err);
           res.writeHead(400);
           res.end("Error charging card");
+          next();
         } else {
           console.log("Charged " + charge.receipt_email + " " + donationAmount);
           res.writeHead(200);
           res.end();
+          next();
         }
       }
     );
@@ -92,7 +116,7 @@ function createSubscription(stripeToken, subscriptionPlan, cb) {
   stripe.customers.create(customer, cb);
 }
 
-function subscribeCustomer(customer, plan, trialDays, res) {
+function subscribeCustomer(customer, plan, trialDays, cb) {
   const daysMiliseconds = trialDays * 24 * 60 * 60 * 1000;
   const endDate = new Date(Date.now() + daysMiliseconds).getTime();
   const trial_end = parseInt(endDate / 1000);
@@ -105,21 +129,11 @@ function subscribeCustomer(customer, plan, trialDays, res) {
     ],
     trial_end
   };
-  stripe.subscriptions.create(subscription, (err, subscription) => {
-    if (err) {
-      console.log(`Error subscribing ${customer.email} to ${plan}`, err);
-      res.writeHead(400);
-      res.end("Error subscribing");
-    } else {
-      console.log(`Subscribed ${customer.email} to ${plan}`);
-      res.writeHead(200);
-      res.end();
-    }
-  });
+  stripe.subscriptions.create(subscription, cb);
 }
 
 // Legacy donate page
-function donate(req, res) {
+function donate(req, res, next) {
   if (!req.params || !req.params.stripeToken) return;
 
   // should really sanitize input
@@ -141,10 +155,12 @@ function donate(req, res) {
           console.log("Error charging card: ", err);
           res.writeHead(400);
           res.end();
+          next();
         } else {
           console.log(charge.email + " " + donationAmount);
           res.writeHead(200);
           res.end();
+          next();
         }
       }
     );
@@ -167,10 +183,12 @@ function donate(req, res) {
           console.log("Error creating subscription: ", err);
           res.writeHead(400);
           res.end();
+          next();
         } else {
           console.log(customer.email + " " + donationAmount);
           res.writeHead(200);
           res.end();
+          next();
         }
       }
     );
