@@ -58,6 +58,7 @@ function charge(req, res, next) {
         currency: "usd",
         source: stripeToken.id,
         description: "Installation"
+        receipt_email: stripeToken.email
       },
       function(err, charge) {
         if (err) {
